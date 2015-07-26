@@ -5,6 +5,15 @@ import subprocess
 
 # subprocess.call('pdf2txt.py -o outfile.txt -t text pdfs/*.pdf', shell=True)
 
+# runDate = ""
+# time = ""
+# name = ""
+# account = ""
+# spec = ""
+# source = ""
+# anti = ""
+# user = ""
+
 startflag = False
 with open('outFile.txt','r') as infile:
     with open('costData.txt','w') as outfile:
@@ -13,36 +22,41 @@ with open('outFile.txt','r') as infile:
         for line in infile:
             if 'CATS Project Manager/Team Leader Billing Report' in line:
                 if startflag:
-                    writer.writerow( ('runDate', 'time', 'name', 'account', 'spec', 'source', 'anti', 'user') )
+                    writer.writerow( (runDate, time, name, account, spec, source, anti, user) )
                 else:
+                    print "Setting flag to true"
                     startflag = True
                 continue
 
             if 'Run Date:' in line:
+                print "Setting flag to false"
                 startflag = False
 
-            run_date = re.match('^Run Date:\s*(\d\d.\d\d.\d\d\d\d)', line)
+            run_date = re.match('^Run Date:     (\d\d.\d\d.\d\d\d\d)', line)
+            print run_date
             if run_date:
-                rundate = run_date.group(1)
+                runDate = run_date.group(1)
+                print "Found a date"
+                print runDate
 
-            user_name = re.match('^USER: (\w{5})', line)
-            if user_name:
-                user = user_name.group(1)
+            # user_name = re.match('^USER: (\w{5})', line)
+            # if user_name:
+            #     user = user_name.group(1)
 
-            acc_name = re.findall('HH\d+ \w+,\w+', line)
-            if acc_name:
-                account, name = acc_name[0].split(' ')
+            # acc_name = re.findall('HH\d+ \w+,\w+', line)
+            # if acc_name:
+            #     account, name = acc_name[0].split(' ')
 
-            date_time = re.findall('(?<=Coll: ).+(?= Recd:)', line)
-            if date_time:
-                date, time = date_time[0].split('-')
+            # date_time = re.findall('(?<=Coll: ).+(?= Recd:)', line)
+            # if date_time:
+            #     date, time = date_time[0].split('-')
 
-            source_re = re.findall('(?<=Source: ).+',line)
-            if source_re:
-                source = source_re[0].strip()
+            # source_re = re.findall('(?<=Source: ).+',line)
+            # if source_re:
+            #     source = source_re[0].strip()
 
-            anti_spec = re.findall('^ +(?!Source)\w+ *\w+ + \S+', line)
-            if anti_spec:
-                stripped_list = anti_spec[0].strip().split()
-                anti = stripped_list[-1]
-                spec = ' '.join(stripped_list[:-1])
+            # anti_spec = re.findall('^ +(?!Source)\w+ *\w+ + \S+', line)
+            # if anti_spec:
+            #     stripped_list = anti_spec[0].strip().split()
+            #     anti = stripped_list[-1]
+            #     spec = ' '.join(stripped_list[:-1])
