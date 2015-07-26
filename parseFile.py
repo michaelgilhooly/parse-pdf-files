@@ -6,18 +6,24 @@ import subprocess
 # subprocess.call('pdf2txt.py -o outfile.txt -t text pdfs/*.pdf', shell=True)
 
 startflag = False
-with open('sample.txt','r') as infile:
+with open('outFile.txt','r') as infile:
     with open('costData.txt','w') as outfile:
-        outfile.write('Date,Time,Name,Account,Specimen,Source,Antibiotic,User\n')
+        writer = csv.writer(outfile)
+        writer.writerow( ('RunDate', 'DateFrom', 'DateTo', 'CostCenter', 'WorkRequest', 'Manager', 'ActivityCode', 'Time', 'EmployeeID', 'EmployeeName') )
         for line in infile:
-            if '---------------' in line:
+            if 'CATS Project Manager/Team Leader Billing Report' in line:
                 if startflag:
-                    outfile.write(','.join((date, time, name, account, spec, source, anti, user))+'\n')
+                    writer.writerow( ('runDate', 'time', 'name', 'account', 'spec', 'source', 'anti', 'user') )
                 else:
                     startflag = True
                 continue
-            if 'Activity' in line:
+
+            if 'Run Date:' in line:
                 startflag = False
+
+            run_date = re.match('^Run Date:\s*(\d\d.\d\d.\d\d\d\d)', line)
+            if run_date:
+                rundate = run_date.group(1)
 
             user_name = re.match('^USER: (\w{5})', line)
             if user_name:
