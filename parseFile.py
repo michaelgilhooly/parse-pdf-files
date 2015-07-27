@@ -3,41 +3,35 @@ import csv
 import re
 import subprocess
 
-# subprocess.call('pdf2txt.py -o outfile.txt -t text pdfs/*.pdf', shell=True)
-
-# runDate = ""
-# time = ""
-# name = ""
-# account = ""
-# spec = ""
-# source = ""
-# anti = ""
-# user = ""
+# subprocess.call('pdf2txt.py -o datafile.txt -t text pdfs/*.pdf', shell=True)
 
 startflag = False
-with open('outFile.txt','r') as infile:
+with open('dataFile.txt','r') as infile:
     with open('costData.txt','w') as outfile:
         writer = csv.writer(outfile)
         writer.writerow( ('RunDate', 'DateFrom', 'DateTo', 'CostCenter', 'WorkRequest', 'Manager', 'ActivityCode', 'Time', 'EmployeeID', 'EmployeeName') )
         for line in infile:
-            if 'CATS Project Manager/Team Leader Billing Report' in line:
+            if 'Total for Billing Period: ' in line:
                 if startflag:
-                    writer.writerow( (runDate, time, name, account, spec, source, anti, user) )
+                    writer.writerow( (runDate, 'dateFrom', 'dateTo', 'costCenter', workRequest, 'manager', 'activityCode', 'time', 'employeeID', 'employeeName') )
                 else:
-                    print "Setting flag to true"
                     startflag = True
                 continue
 
-            if 'Run Date:' in line:
-                print "Setting flag to false"
+            if 'Dev Manager :' in line:
                 startflag = False
 
-            run_date = re.match('^Run Date:     (\d\d.\d\d.\d\d\d\d)', line)
+            run_date = re.match('Run Date:     (\d\d.\d\d.\d\d\d\d)', line)
             print run_date
             if run_date:
                 runDate = run_date.group(1)
-                print "Found a date"
-                print runDate
+
+            work_request = re.match('^Work Request: (\w\w\w\w\w\w\w\w\w)', line)
+            print work_request
+            if work_request:
+                workRequest = work_request.group(1)
+
+
 
             # user_name = re.match('^USER: (\w{5})', line)
             # if user_name:
