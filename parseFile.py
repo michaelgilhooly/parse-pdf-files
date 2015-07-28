@@ -4,9 +4,8 @@ import subprocess
 
 
 def read_pdfs_directory():
-    list_of_pdf_files = glob.glob('pdfs/*.pdf')
-    list_pdf_string = ' '.join(list_of_pdf_files)
-    subprocess.call('pdf2txt.py -o datafile.txt -t text ' + list_pdf_string, shell=True)
+    list_of_pdf_files = ' '.join(glob.glob('pdfs/*.pdf'))
+    subprocess.call('pdf2txt.py -o datafile.txt -t text ' + list_of_pdf_files, shell=True)
 
 
 read_pdfs_directory()
@@ -112,6 +111,3 @@ def transform_data():
                     employee_number, activity_code_number, activity_code_total))
                 continue
     out_file.close()
-
-
-transform_data()
