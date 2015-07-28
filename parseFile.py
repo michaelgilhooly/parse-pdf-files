@@ -1,5 +1,4 @@
 import os
-import csv
 import re
 import subprocess
 
@@ -14,7 +13,7 @@ employee_line_match_groups_count = 2
 billing_period_regex = re.compile('^([\d]+)\s+\(\s+(\d{2}\.\d{2}\.\d{4})\s+-\s+(\d{2}\.\d{2}\.\d{4})\s+\).*')
 billing_period_match_groups_count = 3
 
-#subprocess.call('pdf2txt.py -o datafile.txt -t text "pdfs/Michael Gilhooly 72381 (1).pdf"', shell=True)
+subprocess.call('pdf2txt.py -o datafile.txt -t text "pdfs/test1.pdf"', shell=True)
 
 class MyException(Exception):
     pass
