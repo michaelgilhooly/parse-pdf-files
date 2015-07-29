@@ -1,10 +1,14 @@
 import glob
 import re
 import subprocess
+import pandas
 
 
 def read_pdfs_directory():
-    list_of_pdf_files = ' '.join(glob.glob('pdfs/*.pdf'))
+    # list_of_pdf_files = ' '.join(('"' + glob.glob('pdfs/*.pdf') + '"'))
+    list_of_pdf_files = ' '.join('"{0}"'.format(pdfName) for pdfName in glob.glob('pdfs/*.pdf'))
+    print "List of files that are going to be parsed:"
+    print list_of_pdf_files
     subprocess.call('pdf2txt.py -o datafile.txt -t text ' + list_of_pdf_files, shell=True)
 
 
@@ -58,6 +62,9 @@ def parse_pdfs():
 
     out_file = open('csvfile.csv', 'w')
     with open('dataFile.txt', 'r') as datafile:
+        out_file.write('cost_centre_number, cost_centre_name, work_request_number, work_request_name, employee_number, '
+                               'employee_name, billing_period, billing_period_from_date, billing_period_to_date, activity_code_number, '
+                               'activity_code_total\n')
         for line in datafile:
             line = line.rstrip('\n')
             cost_centre_groups = parse_cost_centre_line(line)
@@ -101,13 +108,9 @@ def parse_pdfs():
 parse_pdfs()
 
 
-def transform_data():
-    out_file = open('TableFile.csv', 'w')
-    with open('csvfile.csv', 'r') as datafile:
-        for line in datafile:
+def calculate_data():
+    data = pandas.read_csv('csvfile.csv')
+    data.head(n=10)
 
 
-                out_file.write('%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' % (
-                    employee_number, activity_code_number, activity_code_total))
-                continue
-    out_file.close()
+calculate_data()
