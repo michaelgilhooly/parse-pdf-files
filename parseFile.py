@@ -2,18 +2,14 @@ import glob
 import re
 import subprocess
 import pandas
+import xlsxwriter
 
 
 def read_pdfs_directory():
-    # list_of_pdf_files = ' '.join(('"' + glob.glob('pdfs/*.pdf') + '"'))
     list_of_pdf_files = ' '.join('"{0}"'.format(pdfName) for pdfName in glob.glob('pdfs/*.pdf'))
     print "List of files that are going to be parsed:"
     print list_of_pdf_files
     subprocess.call('pdf2txt.py -o datafile.txt -t text ' + list_of_pdf_files, shell=True)
-
-
-read_pdfs_directory()
-
 
 def parse_pdfs():
     global cost_centre_regex, cost_centre_match_groups_count, work_request_regex, work_request_match_groups_count, activity_code_regex, activity_code_match_groups_count, employee_line_regex, employee_line_match_groups_count, billing_period_regex, billing_period_match_groups_count, MyException, parse_line
@@ -62,9 +58,9 @@ def parse_pdfs():
 
     out_file = open('csvfile.csv', 'w')
     with open('dataFile.txt', 'r') as datafile:
-        out_file.write('cost_centre_number, cost_centre_name, work_request_number, work_request_name, employee_number, '
-                               'employee_name, billing_period, billing_period_from_date, billing_period_to_date, activity_code_number, '
-                               'activity_code_total\n')
+
+        out_file.write('cost_centre_number,cost_centre_name,work_request_number,work_request_name,employee_number,employee_name,billing_period,billing_period_from_date,billing_period_to_date,activity_code_number,activity_code_total\n')
+
         for line in datafile:
             line = line.rstrip('\n')
             cost_centre_groups = parse_cost_centre_line(line)
@@ -79,10 +75,10 @@ def parse_pdfs():
                 work_request_name = work_request_groups[1].strip()
                 continue
 
-            emplpoyee_line_groups = parse_employee_line(line)
-            if emplpoyee_line_groups:
-                employee_number = emplpoyee_line_groups[0].strip()
-                employee_name = emplpoyee_line_groups[1].strip()
+            employee_line_groups = parse_employee_line(line)
+            if employee_line_groups:
+                employee_number = employee_line_groups[0].strip()
+                employee_name = employee_line_groups[1].strip()
                 continue
 
             billing_period_groups = parse_billing_period_line(line)
@@ -104,13 +100,51 @@ def parse_pdfs():
                 continue
     out_file.close()
 
+def sort_data():
+    data = pandas.DataFrame(pandas.read_csv('csvfile.csv'))
 
-parse_pdfs()
+    subset_data = data.iloc[:,[2,3,4,5,9,10]]
+    grouped_data = subset_data.groupby(["employee_number", "employee_name", "work_request_number", "work_request_name", "activity_code_number"], as_index=True).sum()
 
+    # grouped_data.to_excel('test.xlsx', index_label='label', merge_cells=False)
 
-def calculate_data():
-    data = pandas.read_csv('csvfile.csv')
-    data.head(n=10)
+    workbook = xlsxwriter.Workbook('chart_pie.xlsx')
 
+    worksheet = workbook.add_worksheet()
+    bold = workbook.add_format({'bold': 1})
 
-calculate_data()
+    # Add the worksheet data that the charts will refer to.
+    headings = ['Category', 'Values']
+    data = [
+        ['Apple', 'Cherry', 'Pecan'],
+        [60, 30, 10],
+    ]
+
+    worksheet.write_row('A1', headings, bold)
+    worksheet.write_column('A2', data[0])
+    worksheet.write_column('B2', data[1])
+
+    #######################################################################
+    #
+    # Create a new chart object.
+    #
+    chart1 = workbook.add_chart({'type': 'pie'})
+
+    # Configure the series. Note the use of the list syntax to define ranges:
+    chart1.add_series({
+        'name':       'Pie sales data',
+        'categories': ['Sheet1', 1, 0, 3, 0],
+        'values':     ['Sheet1', 1, 1, 3, 1],
+    })
+
+    # Add a title.
+    chart1.set_title({'name': 'Popular Pie Types'})
+
+    # Insert the chart into the worksheet (with an offset).
+    worksheet.insert_chart('C2', chart1, {'x_offset': 100, 'y_offset': 10})
+
+    workbook.close()
+
+# read_pdfs_directory()
+# parse_pdfs()
+sort_data()
