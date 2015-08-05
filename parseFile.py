@@ -108,35 +108,45 @@ def sort_data():
     data = pandas.DataFrame(pandas.read_csv('csvfile.csv'))
 
     subset_data = data.iloc[:, [2, 3, 4, 5, 9, 10]]
-    print subset_data
     subset_data.columns = ['WRK Number', 'WRK Name', 'Employee Number', 'Name', 'Activity Code', 'Total']
-    grouped_data = subset_data.groupby(
-        ['Employee Number', 'Name', 'WRK Number', 'WRK Name', 'Activity Code'],
-        as_index=True).sum()
 
-    # TODO: Create unique user identifier from employee_number and employee_name. Ex: "Michael-s72381")
+    for row_index, row in subset_data.iterrows():
+        employee_first_name = re.search('(^.+)\s', row['Name'])
+        employee_number = row['Employee Number']
+        worksheet_name = '{}-{}'.format(employee_first_name.group(1), employee_number)
+        print worksheet_name
+        print row
 
-    sheetName = "test"
+    # for emp_id, name, row in subset_data.groupby():
+    #     print row
 
-    writer = pandas.ExcelWriter('test-workbook.xlsx', engine='xlsxwriter')
-    grouped_data.to_excel(writer, sheet_name='test')
+        # grouped_data = row.groupby(
+        #     ['Employee Number', 'Name', 'WRK Number', 'WRK Name', 'Activity Code'])['Total'].sum()
+        #
+        # print grouped_data
 
-    workbook = writer.book
-    worksheet = writer.sheets[sheetName]
-
-    chart = workbook.add_chart({'type': 'pie'})
-
-    chart.set_title({'name': '{}\'s Utilisation Results'.format("Michael")})
-
-    chart.add_series({
-        'categories': '={}!$E$3:$E${}'.format(sheetName, 9),
-        'values': '={}!$F$3:$F${}'.format(sheetName, 9),
-        'data_labels': {'percentage': True},
-    })
-
-    worksheet.insert_chart('H2', chart)
-
-    writer.save()
+    # worksheetName = "test"
+    #
+    # writer = pandas.ExcelWriter('test-workbook.xlsx', engine='xlsxwriter')
+    # grouped_data.to_excel(writer, sheet_name=worksheetName)
+    #
+    # workbook = writer.book
+    # worksheet = writer.sheets[worksheetName]
+    # worksheet.set_column('A:E', 15)
+    #
+    # chart = workbook.add_chart({'type': 'pie'})
+    #
+    # chart.set_title({'name': '{}\'s Utilisation Results'.format(worksheetName)})
+    #
+    # chart.add_series({
+    #     'categories': '={}!$E$3:$E${}'.format(worksheetName, 9),
+    #     'values': '={}!$F$3:$F${}'.format(worksheetName, 9),
+    #     'data_labels': {'percentage': True},
+    # })
+    #
+    # worksheet.insert_chart('H2', chart)
+    #
+    # writer.save()
 
 
 # read_pdfs_directory()
