@@ -11,6 +11,7 @@ def read_pdfs_directory():
     print list_of_pdf_files
     subprocess.call('pdf2txt.py -o datafile.txt -t text ' + list_of_pdf_files, shell=True)
 
+
 def parse_pdfs():
     global cost_centre_regex, cost_centre_match_groups_count, work_request_regex, work_request_match_groups_count, activity_code_regex, activity_code_match_groups_count, employee_line_regex, employee_line_match_groups_count, billing_period_regex, billing_period_match_groups_count, MyException, parse_line
     cost_centre_regex = re.compile('^Cost Centre:\s+([\d]+)\s+(.*)')
@@ -59,7 +60,8 @@ def parse_pdfs():
     out_file = open('csvfile.csv', 'w')
     with open('dataFile.txt', 'r') as datafile:
 
-        out_file.write('cost_centre_number,cost_centre_name,work_request_number,work_request_name,employee_number,employee_name,billing_period,billing_period_from_date,billing_period_to_date,activity_code_number,activity_code_total\n')
+        out_file.write(
+            'cost_centre_number,cost_centre_name,work_request_number,work_request_name,employee_number,employee_name,billing_period,billing_period_from_date,billing_period_to_date,activity_code_number,activity_code_total\n')
 
         for line in datafile:
             line = line.rstrip('\n')
@@ -94,56 +96,48 @@ def parse_pdfs():
                 activity_code_total = activity_code_groups[2].strip()
 
                 out_file.write('%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' % (
-                cost_centre_number, cost_centre_name, work_request_number, work_request_name, employee_number,
-                employee_name, billing_period, billing_period_from_date, billing_period_to_date, activity_code_number,
-                activity_code_total))
+                    cost_centre_number, cost_centre_name, work_request_number, work_request_name, employee_number,
+                    employee_name, billing_period, billing_period_from_date, billing_period_to_date,
+                    activity_code_number,
+                    activity_code_total))
                 continue
     out_file.close()
+
 
 def sort_data():
     data = pandas.DataFrame(pandas.read_csv('csvfile.csv'))
 
-    subset_data = data.iloc[:,[2,3,4,5,9,10]]
-    grouped_data = subset_data.groupby(["employee_number", "employee_name", "work_request_number", "work_request_name", "activity_code_number"], as_index=True).sum()
+    subset_data = data.iloc[:, [2, 3, 4, 5, 9, 10]]
+    print subset_data
+    subset_data.columns = ['WRK Number', 'WRK Name', 'Employee Number', 'Name', 'Activity Code', 'Total']
+    grouped_data = subset_data.groupby(
+        ['Employee Number', 'Name', 'WRK Number', 'WRK Name', 'Activity Code'],
+        as_index=True).sum()
 
-    # grouped_data.to_excel('test.xlsx', index_label='label', merge_cells=False)
+    # TODO: Create unique user identifier from employee_number and employee_name. Ex: "Michael-s72381")
 
-    workbook = xlsxwriter.Workbook('chart_pie.xlsx')
+    sheetName = "test"
 
-    worksheet = workbook.add_worksheet()
-    bold = workbook.add_format({'bold': 1})
+    writer = pandas.ExcelWriter('test-workbook.xlsx', engine='xlsxwriter')
+    grouped_data.to_excel(writer, sheet_name='test')
 
-    # Add the worksheet data that the charts will refer to.
-    headings = ['Category', 'Values']
-    data = [
-        ['Apple', 'Cherry', 'Pecan'],
-        [60, 30, 10],
-    ]
+    workbook = writer.book
+    worksheet = writer.sheets[sheetName]
 
-    worksheet.write_row('A1', headings, bold)
-    worksheet.write_column('A2', data[0])
-    worksheet.write_column('B2', data[1])
+    chart = workbook.add_chart({'type': 'pie'})
 
-    #######################################################################
-    #
-    # Create a new chart object.
-    #
-    chart1 = workbook.add_chart({'type': 'pie'})
+    chart.set_title({'name': '{}\'s Utilisation Results'.format("Michael")})
 
-    # Configure the series. Note the use of the list syntax to define ranges:
-    chart1.add_series({
-        'name':       'Pie sales data',
-        'categories': ['Sheet1', 1, 0, 3, 0],
-        'values':     ['Sheet1', 1, 1, 3, 1],
+    chart.add_series({
+        'categories': '={}!$E$3:$E${}'.format(sheetName, 9),
+        'values': '={}!$F$3:$F${}'.format(sheetName, 9),
+        'data_labels': {'percentage': True},
     })
 
-    # Add a title.
-    chart1.set_title({'name': 'Popular Pie Types'})
+    worksheet.insert_chart('H2', chart)
 
-    # Insert the chart into the worksheet (with an offset).
-    worksheet.insert_chart('C2', chart1, {'x_offset': 100, 'y_offset': 10})
+    writer.save()
 
-    workbook.close()
 
 # read_pdfs_directory()
 # parse_pdfs()
