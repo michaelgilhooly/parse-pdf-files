@@ -2,7 +2,9 @@ import glob
 import re
 import subprocess
 import pandas
+import csv
 import xlsxwriter
+import collections
 
 
 def read_pdfs_directory():
@@ -105,49 +107,40 @@ def parse_pdfs():
 
 
 def sort_data():
+
     data = pandas.DataFrame(pandas.read_csv('csvfile.csv'))
 
     subset_data = data.iloc[:, [2, 3, 4, 5, 9, 10]]
     subset_data.columns = ['WRK Number', 'WRK Name', 'Employee Number', 'Name', 'Activity Code', 'Total']
 
-    for row_index, row in subset_data.iterrows():
-        employee_first_name = re.search('(^.+)\s', row['Name'])
-        employee_number = row['Employee Number']
-        worksheet_name = '{}-{}'.format(employee_first_name.group(1), employee_number)
-        print worksheet_name
-        print row
+    writer = pandas.ExcelWriter('test-workbook.xlsx', engine='xlsxwriter')
 
-    # for emp_id, name, row in subset_data.groupby():
-    #     print row
+    for name in set(subset_data['Name']):
+        name_subset_data = subset_data[subset_data['Name'] == name]
 
-        # grouped_data = row.groupby(
-        #     ['Employee Number', 'Name', 'WRK Number', 'WRK Name', 'Activity Code'])['Total'].sum()
-        #
-        # print grouped_data
+        grouped_data = name_subset_data.groupby(
+            ['Employee Number', 'Name', 'WRK Number', 'WRK Name', 'Activity Code'],
+            as_index=True).sum()
 
-    # worksheetName = "test"
-    #
-    # writer = pandas.ExcelWriter('test-workbook.xlsx', engine='xlsxwriter')
-    # grouped_data.to_excel(writer, sheet_name=worksheetName)
-    #
-    # workbook = writer.book
-    # worksheet = writer.sheets[worksheetName]
-    # worksheet.set_column('A:E', 15)
-    #
-    # chart = workbook.add_chart({'type': 'pie'})
-    #
-    # chart.set_title({'name': '{}\'s Utilisation Results'.format(worksheetName)})
-    #
-    # chart.add_series({
-    #     'categories': '={}!$E$3:$E${}'.format(worksheetName, 9),
-    #     'values': '={}!$F$3:$F${}'.format(worksheetName, 9),
-    #     'data_labels': {'percentage': True},
-    # })
-    #
-    # worksheet.insert_chart('H2', chart)
-    #
-    # writer.save()
+        print grouped_data
+        print name
 
+        grouped_data.to_excel(writer, sheet_name=name)
+
+        workbook = writer.book
+        worksheet = writer.sheets[name]
+
+        chart = workbook.add_chart({'type': 'pie'})
+
+        chart.add_series({
+            'categories': '={}!$E$3:$E${}'.format(name, 9),
+            'values': '={}!$F$3:$F${}'.format(name, 9),
+            'data_labels': {'percentage': True},
+        })
+
+        worksheet.insert_chart('H{}'.format(2), chart)
+
+    writer.save()
 
 # read_pdfs_directory()
 # parse_pdfs()
