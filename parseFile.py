@@ -3,12 +3,14 @@ import re
 import subprocess
 import pandas
 
-
 def read_pdfs_directory():
+    print "*****PROCESS STARTED*****"
     list_of_pdf_files = ' '.join('"{0}"'.format(pdfName) for pdfName in glob.glob('pdfs/*.pdf'))
     print "List of files that are going to be parsed:"
     print list_of_pdf_files
     subprocess.call('pdf2txt.py -o datafile.txt -t text ' + list_of_pdf_files, shell=True)
+    print "Completed reading PDF files"
+    print "Created datafile.txt from PDFs"
 
 
 def parse_pdfs():
@@ -58,7 +60,8 @@ def parse_pdfs():
 
     out_file = open('csvfile.csv', 'w')
     with open('dataFile.txt', 'r') as datafile:
-
+        print "Parsing datafile.txt"
+        print "Creating csvfile.csv"
         out_file.write(
             'cost_centre_number,cost_centre_name,work_request_number,work_request_name,employee_number,employee_name,billing_period,billing_period_from_date,billing_period_to_date,activity_code_number,activity_code_total\n')
 
@@ -67,60 +70,78 @@ def parse_pdfs():
             cost_centre_groups = parse_cost_centre_line(line)
             if cost_centre_groups:
                 cost_centre_number = cost_centre_groups[0].strip()
+                print "Found Cost Centre Number: {}".format(cost_centre_number)
                 cost_centre_name = cost_centre_groups[1].strip()
+                print "Found Cost Centre Name: {}".format(cost_centre_name)
                 continue
 
             work_request_groups = parse_work_request_line(line)
             if work_request_groups:
                 work_request_number = work_request_groups[0].strip()
+                print "Found Work Request Number: {}".format(work_request_number)
                 work_request_name = work_request_groups[1].strip()
+                print "Found Work Request Name: {}".format(work_request_name)
                 continue
 
             employee_line_groups = parse_employee_line(line)
             if employee_line_groups:
                 employee_number = employee_line_groups[0].strip()
+                print "Found Employee Number: {}".format(employee_number)
                 employee_name = employee_line_groups[1].strip()
+                print "Found Employee Name: {}".format(employee_name)
                 continue
 
             billing_period_groups = parse_billing_period_line(line)
             if billing_period_groups:
                 billing_period = billing_period_groups[0]
+                print "Found Billing Period: {}".format(billing_period)
                 billing_period_from_date = reformat_date(billing_period_groups[1])
+                print "Found Billing from data: {}".format(billing_period_from_date)
                 billing_period_to_date = reformat_date(billing_period_groups[2])
+                print "Found Billing to date: {}".format(billing_period_to_date)
                 continue
 
             activity_code_groups = parse_activity_code_line(line)
             if activity_code_groups:
                 activity_code_number = activity_code_groups[0].strip()
+                print "Found Activity Code Number: {}".format(activity_code_number)
                 activity_code_total = activity_code_groups[2].strip()
+                print "Found Activity Code Total: {}".format(activity_code_total)
 
                 out_file.write('%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' % (
                     cost_centre_number, cost_centre_name, work_request_number, work_request_name, employee_number,
                     employee_name, billing_period, billing_period_from_date, billing_period_to_date,
                     activity_code_number,
                     activity_code_total))
+                print "Print to file: csvfile.csv"
                 continue
     out_file.close()
 
 
 def sort_data():
 
+    print "Reading the csvfile.csv..."
     data = pandas.DataFrame(pandas.read_csv('csvfile.csv'))
 
+    print "Sorting through csvfile table..."
     subset_data = data.iloc[:, [2, 3, 4, 5, 9, 10]]
     subset_data.columns = ['WRK Number', 'WRK Name', 'Employee Number', 'Name', 'Activity Code', 'Total']
 
-    writer = pandas.ExcelWriter('test-workbook.xlsx', engine='xlsxwriter')
+    print "Creating team-utilisation-workbook.xlsx..."
+    writer = pandas.ExcelWriter('team-utilisation-workbook.xlsx', engine='xlsxwriter')
 
+    print "Subsetting and looping through data per person..."
     for name in set(subset_data['Name']):
         name_subset_data = subset_data[subset_data['Name'] == name]
 
+        print "Grouping data and summing activity times..."
         grouped_data = name_subset_data.groupby(
             ['Employee Number', 'Name', 'WRK Number', 'WRK Name', 'Activity Code'],
             as_index=True).sum()
 
         table_length = len(grouped_data.index)
 
+        print "Writing table to file..."
         grouped_data.to_excel(writer, sheet_name=name)
 
         workbook = writer.book
@@ -130,19 +151,23 @@ def sort_data():
 
         chart.set_title({'name': '{}\'s Utilisation chart'.format(name)})
 
+        print "Creating chart..."
         chart.add_series({
             'categories': '={}!$E$3:$E${}'.format(name, 2 + table_length),
             'values': '={}!$F$3:$F${}'.format(name, 2 + table_length),
             'data_labels': {'percentage': True},
         })
 
+        print "Inserting chart..."
         worksheet.insert_chart('H{}'.format(2), chart)
 
         worksheet.set_column('A:C', 10)
         worksheet.set_column('D:D', 15)
         worksheet.set_column('E:F', 10)
 
+    print "Saving xlsx file..."
     writer.save()
+    print "*****PROCESS COMPLETED*****"
 
 read_pdfs_directory()
 parse_pdfs()
