@@ -161,9 +161,9 @@ def sort_data():
         print "Inserting chart..."
         worksheet.insert_chart('H{}'.format(2), chart)
 
-        worksheet.set_column('A:C', 10)
+        worksheet.set_column('A:C', 15)
         worksheet.set_column('D:D', 15)
-        worksheet.set_column('E:F', 10)
+        worksheet.set_column('E:F', 12)
 
     print "Saving xlsx file..."
     writer.save()
