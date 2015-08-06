@@ -2,9 +2,6 @@ import glob
 import re
 import subprocess
 import pandas
-import csv
-import xlsxwriter
-import collections
 
 
 def read_pdfs_directory():
@@ -122,8 +119,7 @@ def sort_data():
             ['Employee Number', 'Name', 'WRK Number', 'WRK Name', 'Activity Code'],
             as_index=True).sum()
 
-        print grouped_data
-        print name
+        table_length = len(grouped_data.index)
 
         grouped_data.to_excel(writer, sheet_name=name)
 
@@ -132,16 +128,22 @@ def sort_data():
 
         chart = workbook.add_chart({'type': 'pie'})
 
+        chart.set_title({'name': '{}\'s Utilisation chart'.format(name)})
+
         chart.add_series({
-            'categories': '={}!$E$3:$E${}'.format(name, 9),
-            'values': '={}!$F$3:$F${}'.format(name, 9),
+            'categories': '={}!$E$3:$E${}'.format(name, 2 + table_length),
+            'values': '={}!$F$3:$F${}'.format(name, 2 + table_length),
             'data_labels': {'percentage': True},
         })
 
         worksheet.insert_chart('H{}'.format(2), chart)
 
+        worksheet.set_column('A:C', 10)
+        worksheet.set_column('D:D', 15)
+        worksheet.set_column('E:F', 10)
+
     writer.save()
 
-# read_pdfs_directory()
-# parse_pdfs()
+read_pdfs_directory()
+parse_pdfs()
 sort_data()
