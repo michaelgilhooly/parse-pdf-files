@@ -2,26 +2,29 @@ import glob
 import re
 import subprocess
 import pandas
+import csv
+
 
 def read_pdfs_directory():
     print "*****PROCESS STARTED*****"
-    list_of_pdf_files = ' '.join('"{0}"'.format(pdfName) for pdfName in glob.glob('pdfs/*.pdf'))
+    list_of_pdf_files = ' '.join('"{}"'.format(pdfName) for pdfName in glob.glob('pdfs/*.pdf'))
     print "List of files that are going to be parsed:"
     print list_of_pdf_files
+    print "Please be patient, it takes a while to read all the pdf files..."
     subprocess.call('pdf2txt.py -o datafile.txt -t text ' + list_of_pdf_files, shell=True)
     print "Completed reading PDF files"
     print "Created datafile.txt from PDFs"
 
-
 def parse_pdfs():
     global cost_centre_regex, cost_centre_match_groups_count, work_request_regex, work_request_match_groups_count, activity_code_regex, activity_code_match_groups_count, employee_line_regex, employee_line_match_groups_count, billing_period_regex, billing_period_match_groups_count, MyException, parse_line
+
     cost_centre_regex = re.compile('^Cost Centre:\s+([\d]+)\s+(.*)')
     cost_centre_match_groups_count = 2
     work_request_regex = re.compile('^Work Request:\s+([^\s]+)\s+(.*)')
     work_request_match_groups_count = 2
     activity_code_regex = re.compile('^\s+Total for Activity Code:\s+([^\s]+)\s+([^\d\.])+\s+([\d]+.[\d]+).*')
     activity_code_match_groups_count = 3
-    employee_line_regex = re.compile('^\s+([\d]+)\s+([^\d]+)\s+\d+\d+.\d+\s+\d+\.\d+.*')
+    employee_line_regex = re.compile('^\s+(\d+)\s+(\w+\s+\w+)\s+\d+\d+.\d+\s+\d+\.\d+.*')
     employee_line_match_groups_count = 2
     billing_period_regex = re.compile('^([\d]+)\s+\(\s+(\d{2}\.\d{2}\.\d{4})\s+-\s+(\d{2}\.\d{2}\.\d{4})\s+\).*')
     billing_period_match_groups_count = 3
@@ -58,15 +61,21 @@ def parse_pdfs():
         date_parts = date.split('.')
         return date_parts[2] + '-' + date_parts[1] + '-' + date_parts[0]
 
-    out_file = open('csvfile.csv', 'w')
-    with open('dataFile.txt', 'r') as datafile:
-        print "Parsing datafile.txt"
-        print "Creating csvfile.csv"
-        out_file.write(
-            'cost_centre_number,cost_centre_name,work_request_number,work_request_name,employee_number,employee_name,billing_period,billing_period_from_date,billing_period_to_date,activity_code_number,activity_code_total\n')
+    with open('datafile.txt', 'r') as datafile, open('csvFile.csv', 'wb') as out_file:
+        writer = csv.writer(out_file)
+
+        print "Parsing completeDataFile.txt"
+        print "Creating csvFile.csv"
+
+        writer.writerow(
+            ["cost_centre_number", "cost_centre_name", "work_request_number", "work_request_name", "employee_number",
+             "employee_name", "billing_period", "billing_period_from_date", "billing_period_to_date",
+             "activity_code_number", "activity_code_total"])
 
         for line in datafile:
             line = line.rstrip('\n')
+            line = line.decode('utf-8').replace(u'\u2013', '-')
+
             cost_centre_groups = parse_cost_centre_line(line)
             if cost_centre_groups:
                 cost_centre_number = cost_centre_groups[0].strip()
@@ -108,40 +117,40 @@ def parse_pdfs():
                 activity_code_total = activity_code_groups[2].strip()
                 print "Found Activity Code Total: {}".format(activity_code_total)
 
-                out_file.write('%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n' % (
-                    cost_centre_number, cost_centre_name, work_request_number, work_request_name, employee_number,
-                    employee_name, billing_period, billing_period_from_date, billing_period_to_date,
-                    activity_code_number,
-                    activity_code_total))
-                print "Print to file: csvfile.csv"
+                csv_data_set = [cost_centre_number, cost_centre_name, work_request_number, work_request_name,
+                                employee_number,
+                                employee_name, billing_period, billing_period_from_date, billing_period_to_date,
+                                activity_code_number,
+                                activity_code_total]
+
+                writer.writerow(csv_data_set)
+                print "Print to file: csvFile.csv"
                 continue
-    out_file.close()
 
 
 def sort_data():
+    print "Reading the csvFile.csv..."
+    data = pandas.DataFrame(pandas.read_csv('csvFile.csv'))
 
-    print "Reading the csvfile.csv..."
-    data = pandas.DataFrame(pandas.read_csv('csvfile.csv'))
-
-    print "Sorting through csvfile table..."
+    print "Sorting through csvFile table..."
     subset_data = data.iloc[:, [2, 3, 4, 5, 9, 10]]
     subset_data.columns = ['WRK Number', 'WRK Name', 'Employee Number', 'Name', 'Activity Code', 'Total']
 
     print "Creating team-utilisation-workbook.xlsx..."
     writer = pandas.ExcelWriter('team-utilisation-workbook.xlsx', engine='xlsxwriter')
 
-    print "Subsetting and looping through data per person..."
+    print "Subsetting and looping through data for each person..."
     for name in set(subset_data['Name']):
         name_subset_data = subset_data[subset_data['Name'] == name]
 
-        print "Grouping data and summing activity times..."
+        print "Grouping data and summing activity times for " + name + "..."
         grouped_data = name_subset_data.groupby(
             ['Employee Number', 'Name', 'WRK Number', 'WRK Name', 'Activity Code'],
             as_index=True).sum()
 
         table_length = len(grouped_data.index)
 
-        print "Writing table to file..."
+        print "Writing table for " + name + "..."
         grouped_data.to_excel(writer, sheet_name=name)
 
         workbook = writer.book
@@ -151,14 +160,14 @@ def sort_data():
 
         chart.set_title({'name': '{}\'s Utilisation chart'.format(name)})
 
-        print "Creating chart..."
+        print "Creating chart for " + name + "..."
         chart.add_series({
             'categories': '={}!$E$3:$E${}'.format(name, 2 + table_length),
             'values': '={}!$F$3:$F${}'.format(name, 2 + table_length),
             'data_labels': {'percentage': True},
         })
 
-        print "Inserting chart..."
+        print "Inserting chart for " + name + "..."
         worksheet.insert_chart('H{}'.format(2), chart)
 
         worksheet.set_column('A:C', 15)
@@ -168,6 +177,7 @@ def sort_data():
     print "Saving xlsx file..."
     writer.save()
     print "*****PROCESS COMPLETED*****"
+
 
 read_pdfs_directory()
 parse_pdfs()
