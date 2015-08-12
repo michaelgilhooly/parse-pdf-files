@@ -1,22 +1,29 @@
 import glob
 import re
-import subprocess
 import pandas
 import csv
-
+import os
+import pdf2txt
 
 def read_pdfs_directory():
     print "*****PROCESS STARTED*****"
-    list_of_pdf_files = ' '.join('"{}"'.format(pdfName) for pdfName in glob.glob('pdfs/*.pdf'))
+    print "Cleaning directory"
+    clean_up()
+    list_of_pdf_files = glob.glob('pdfs/*.pdf')
     print "List of files that are going to be parsed:"
     print list_of_pdf_files
-    print "Please be patient, it takes a while to read all the pdf files..."
-    subprocess.call('pdf2txt.py -o datafile.txt -t text ' + list_of_pdf_files, shell=True)
+    with open("datafile.txt", "a") as myfile:
+        for individual in list_of_pdf_files:
+            print "Reading: {}".format(individual)
+            pdf2txt.main(['', '-o', 'individualfile.txt', '-t', 'text', individual])
+            individual_file = open('individualfile.txt', 'r')
+            individual_content = individual_file.read()
+            myfile.write(individual_content)
+            print "Finished reading: {}".format(individual)
     print "Completed reading PDF files"
     print "Created datafile.txt from PDFs"
 
 def parse_pdfs():
-    global cost_centre_regex, cost_centre_match_groups_count, work_request_regex, work_request_match_groups_count, activity_code_regex, activity_code_match_groups_count, employee_line_regex, employee_line_match_groups_count, billing_period_regex, billing_period_match_groups_count, MyException, parse_line
 
     cost_centre_regex = re.compile('^Cost Centre:\s+([\d]+)\s+(.*)')
     cost_centre_match_groups_count = 2
@@ -176,7 +183,17 @@ def sort_data():
 
     print "Saving xlsx file..."
     writer.save()
+    print "Deleting supporting files"
+    clean_up()
     print "*****PROCESS COMPLETED*****"
+
+
+def clean_up():
+    for project_file in ('datafile.txt', 'individualfile.txt', 'csvFile.csv'):
+        try:
+            os.remove(project_file)
+        except OSError:
+            pass
 
 
 read_pdfs_directory()
