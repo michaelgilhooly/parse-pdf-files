@@ -155,72 +155,61 @@ def sort_data():
         name_subset_data = subset_data[subset_data['Name'] == name]
 
         for row_index, row in name_subset_data.iterrows():
-            print row_index
-
             if row['Activity Code'] in values:
-                name_subset_data.loc[row_index, 'Utilisation'] = 'YES'
+                name_subset_data.loc[row_index, 'Utilisation'] = 'Available time'
             else:
-                name_subset_data.loc[row_index, 'Utilisation'] = 'NO'
+                name_subset_data.loc[row_index, 'Utilisation'] = 'Billable time'
 
-        # for activity_code in set(name_subset_data['Activity Code']):
-        #
-        #     utilisation = 'YES' if activity_code in values else 'NO'
-        #
-        #     name_subset_data.loc[name_subset_data['Activity Code'] == activity_code, 'Utilisation'] = utilisation
-
-
-            # for i in activity_code.index:
-            #     print i
-                # print 'BEFORE'
-                # print name_subset_data
-                # name_subset_data['Utilisation'][i] = utilisation
-                # name_subset_data.xs(i, copy=False)['Utilisation'] = utilisation
-                # name_subset_data.loc[i, 'Utilisation'] = utilisation
-
-                # print 'AFTER'
-                # print name_subset_data
-                # print
-
-        # for i, activity_code in name_subset_data['Activity Code'].index:
-        #     print i
-        #     for value1 in value:
-        #         if activity_code == value1:
-        #             name_subset_data.xs(i, copy = False)['Utilisation'] = "SomethingIf"
-        #             print "IF"
-        #         else:
-        #             name_subset_data.xs(i, copy = False)['Utilisation'] = "SomethingElse"
-        #             print "ELSE"
-
-
-        print name_subset_data
-        print "Grouping data and summing activity times for " + name + "..."
-        grouped_data = name_subset_data.groupby(
+        print "Grouping activity data and summing times for " + name + "..."
+        activity_data = name_subset_data.groupby(
             ['Employee Number', 'Name', 'WRK Number', 'WRK Name', 'Activity Code', 'Utilisation'],
             as_index=True).sum()
-        print grouped_data
 
-        table_length = len(grouped_data.index)
+        activity_table_length = len(activity_data.index)
 
-        print "Writing table for " + name + "..."
-        grouped_data.to_excel(writer, sheet_name=name)
+        print "Writing activity table for " + name + "..."
+        activity_data.to_excel(writer, sheet_name=name)
+
+        print "Grouping utilisation data and summing times for " + name + "..."
+        utilisation_data = name_subset_data.groupby(['Utilisation'], as_index=False)['Total'].sum()
+        utilisation_table_length = len(utilisation_data.index)
+
+        print "Writing utilisation table for " + name + "..."
+        utilisation_data.to_excel(writer, sheet_name=name, startrow=activity_table_length+4)
 
         # Builds the chart from data
         workbook = writer.book
         worksheet = writer.sheets[name]
 
-        chart = workbook.add_chart({'type': 'pie'})
+        activity_chart = workbook.add_chart({'type': 'pie'})
 
-        chart.set_title({'name': '{}\'s Utilisation chart'.format(name)})
+        activity_chart.set_title({'name': '{}\'s Utilisation chart'.format(name)})
 
-        print "Creating chart for " + name + "..."
-        chart.add_series({
-            'categories': '={}!$E$3:$E${}'.format(name, 2 + table_length),
-            'values': '={}!$G$3:$G${}'.format(name, 2 + table_length),
+        print "Creating activity chart for " + name + "..."
+        activity_chart.add_series({
+            'categories': '={}!$E$3:$E${}'.format(name, 2 + activity_table_length),
+            'values': '={}!$G$3:$G${}'.format(name, 2 + activity_table_length),
             'data_labels': {'percentage': True},
         })
 
-        print "Inserting chart for " + name + "..."
-        worksheet.insert_chart('I{}'.format(2), chart)
+        print "Inserting activity chart for " + name + "..."
+        worksheet.insert_chart('I{}'.format(2), activity_chart)
+
+        utilisation_chart = workbook.add_chart({'type': 'pie'})
+
+        utilisation_chart.set_title({'name': '{}\'s Utilisation chart'.format(name)})
+
+        print "Creating utilisation chart for " + name + "..."
+        utilisation_chart.add_series({
+            'categories': '={}!$B${}:$B${}'.format(name, 6 + activity_table_length,
+                                                   5 + activity_table_length + utilisation_table_length),
+            'values': '={}!$C${}:$C${}'.format(name, 6 + activity_table_length,
+                                               5 + activity_table_length + utilisation_table_length),
+            'data_labels': {'percentage': True},
+        })
+
+        print "Inserting utilisation chart for " + name + "..."
+        worksheet.insert_chart('I{}'.format(18), utilisation_chart)
 
         worksheet.set_column('A:C', 15)
         worksheet.set_column('D:D', 15)
@@ -230,7 +219,7 @@ def sort_data():
     writer.save()
     print "Deleting supporting files"
     # TODO: Re-initiate the cleanup comment
-    # clean_up()
+    clean_up()
     print "\n*****PROCESS COMPLETED*****"
 
 
@@ -242,6 +231,6 @@ def clean_up():
             pass
 
 
-# read_pdfs_directory()
-# parse_pdfs()
+read_pdfs_directory()
+parse_pdfs()
 sort_data()
