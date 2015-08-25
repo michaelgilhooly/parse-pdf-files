@@ -154,19 +154,19 @@ def sort_data():
     for name in set(subset_data['Name']):
         name_subset_data = subset_data[subset_data['Name'] == name]
 
-        # for row_index, row in name_subset_data.iterrows():
-        #     if row['Activity Code'] in values:
-        #         row.loc['Utilisation'] = 'YES'
-        #     else:
-        #         row.loc['Utilisation'] = 'NO'
+        for row_index, row in name_subset_data.iterrows():
+            print row_index
 
-        for activity_code in set(name_subset_data['Activity Code']):
+            if row['Activity Code'] in values:
+                name_subset_data.loc[row_index, 'Utilisation'] = 'YES'
+            else:
+                name_subset_data.loc[row_index, 'Utilisation'] = 'NO'
 
-            utilisation = 'YES' if activity_code in values else 'NO'
-            if utilisation == 'YES':
-                print '###################### we have a YES'
-
-            name_subset_data.loc[name_subset_data['Activity Code'] == activity_code, 'Utilisation'] = utilisation
+        # for activity_code in set(name_subset_data['Activity Code']):
+        #
+        #     utilisation = 'YES' if activity_code in values else 'NO'
+        #
+        #     name_subset_data.loc[name_subset_data['Activity Code'] == activity_code, 'Utilisation'] = utilisation
 
 
             # for i in activity_code.index:
@@ -181,11 +181,10 @@ def sort_data():
                 # print name_subset_data
                 # print
 
-            print name_subset_data
-        # for i, activity_code in set(name_subset_data['Activity Code'].index):
+        # for i, activity_code in name_subset_data['Activity Code'].index:
         #     print i
         #     for value1 in value:
-        #         if activity_code == ''.join(value1):
+        #         if activity_code == value1:
         #             name_subset_data.xs(i, copy = False)['Utilisation'] = "SomethingIf"
         #             print "IF"
         #         else:
