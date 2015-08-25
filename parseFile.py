@@ -5,8 +5,9 @@ import csv
 import os
 import pdf2txt
 
+
 def read_pdfs_directory():
-    print "*****PROCESS STARTED*****"
+    print "*****PROCESS STARTED*****\n"
     print "Cleaning directory"
     clean_up()
     list_of_pdf_files = glob.glob('pdfs/*.pdf')
@@ -23,8 +24,8 @@ def read_pdfs_directory():
     print "Completed reading PDF files"
     print "Created datafile.txt from PDFs"
 
-def parse_pdfs():
 
+def parse_pdfs():
     cost_centre_regex = re.compile('^Cost Centre:\s+([\d]+)\s+(.*)')
     cost_centre_match_groups_count = 2
     work_request_regex = re.compile('^Work Request:\s+([^\s]+)\s+(.*)')
@@ -142,6 +143,9 @@ def sort_data():
     print "Sorting through csvFile table..."
     subset_data = data.iloc[:, [2, 3, 4, 5, 9, 10]]
     subset_data.columns = ['WRK Number', 'WRK Name', 'Employee Number', 'Name', 'Activity Code', 'Total']
+    subset_data.insert(5, "Utilisation", "")
+
+    values = set(['LVE_ANNUAL', 'LVE_OTHER', 'LVE_LONG', 'LVE_PUBLIC', 'LVE_SICK', 'CONTR_ABS'])
 
     print "Creating team-utilisation-workbook.xlsx..."
     writer = pandas.ExcelWriter('team-utilisation-workbook.xlsx', engine='xlsxwriter')
@@ -150,16 +154,58 @@ def sort_data():
     for name in set(subset_data['Name']):
         name_subset_data = subset_data[subset_data['Name'] == name]
 
+        # for row_index, row in name_subset_data.iterrows():
+        #     if row['Activity Code'] in values:
+        #         row.loc['Utilisation'] = 'YES'
+        #     else:
+        #         row.loc['Utilisation'] = 'NO'
+
+        for activity_code in set(name_subset_data['Activity Code']):
+
+            utilisation = 'YES' if activity_code in values else 'NO'
+            if utilisation == 'YES':
+                print '###################### we have a YES'
+
+            name_subset_data.loc[name_subset_data['Activity Code'] == activity_code, 'Utilisation'] = utilisation
+
+
+            # for i in activity_code.index:
+            #     print i
+                # print 'BEFORE'
+                # print name_subset_data
+                # name_subset_data['Utilisation'][i] = utilisation
+                # name_subset_data.xs(i, copy=False)['Utilisation'] = utilisation
+                # name_subset_data.loc[i, 'Utilisation'] = utilisation
+
+                # print 'AFTER'
+                # print name_subset_data
+                # print
+
+            print name_subset_data
+        # for i, activity_code in set(name_subset_data['Activity Code'].index):
+        #     print i
+        #     for value1 in value:
+        #         if activity_code == ''.join(value1):
+        #             name_subset_data.xs(i, copy = False)['Utilisation'] = "SomethingIf"
+        #             print "IF"
+        #         else:
+        #             name_subset_data.xs(i, copy = False)['Utilisation'] = "SomethingElse"
+        #             print "ELSE"
+
+
+        print name_subset_data
         print "Grouping data and summing activity times for " + name + "..."
         grouped_data = name_subset_data.groupby(
-            ['Employee Number', 'Name', 'WRK Number', 'WRK Name', 'Activity Code'],
+            ['Employee Number', 'Name', 'WRK Number', 'WRK Name', 'Activity Code', 'Utilisation'],
             as_index=True).sum()
+        print grouped_data
 
         table_length = len(grouped_data.index)
 
         print "Writing table for " + name + "..."
         grouped_data.to_excel(writer, sheet_name=name)
 
+        # Builds the chart from data
         workbook = writer.book
         worksheet = writer.sheets[name]
 
@@ -170,12 +216,12 @@ def sort_data():
         print "Creating chart for " + name + "..."
         chart.add_series({
             'categories': '={}!$E$3:$E${}'.format(name, 2 + table_length),
-            'values': '={}!$F$3:$F${}'.format(name, 2 + table_length),
+            'values': '={}!$G$3:$G${}'.format(name, 2 + table_length),
             'data_labels': {'percentage': True},
         })
 
         print "Inserting chart for " + name + "..."
-        worksheet.insert_chart('H{}'.format(2), chart)
+        worksheet.insert_chart('I{}'.format(2), chart)
 
         worksheet.set_column('A:C', 15)
         worksheet.set_column('D:D', 15)
@@ -184,8 +230,9 @@ def sort_data():
     print "Saving xlsx file..."
     writer.save()
     print "Deleting supporting files"
-    clean_up()
-    print "*****PROCESS COMPLETED*****"
+    # TODO: Re-initiate the cleanup comment
+    # clean_up()
+    print "\n*****PROCESS COMPLETED*****"
 
 
 def clean_up():
@@ -196,6 +243,6 @@ def clean_up():
             pass
 
 
-read_pdfs_directory()
-parse_pdfs()
+# read_pdfs_directory()
+# parse_pdfs()
 sort_data()
